@@ -167,7 +167,7 @@ router.get("/getFriendWishlist/:fbId", function(req, res, next) {
             if(user) {
                 res.json(user.wishlist);
             } else {
-                res.send(400, "Could not find the user [" + fbId + "] in the database");
+                res.send(404, "Could not find the user [" + fbId + "] in the database");
             }
         }
     });
@@ -188,7 +188,7 @@ var withUser = function(fbId, req, res, successCb, next) {
             if(user) {
                 var ret = successCb(user);
                 if (ret !== undefined)
-                    next(ret);
+                    next(null, ret);
             } else {
                 res.send(400, "Could not find the user [" + fbId + "] in the database");
             }
@@ -203,7 +203,9 @@ router.post('/addWish', function (req, res, next) {
     var content = req.body.content;
 
     if (!fbId || !content) {
-        res.status(500).send('id or wish content not set (got fbId=' + fbId + ', content="' + content + '")');
+        var errmsg = 'id or wish content not set (got fbId=' + fbId + ', content="' + content + '")';
+        console.error(errmsg);
+        res.status(500, errmsg);
         return;
     }
 

@@ -6,6 +6,8 @@
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="Node.js v0.10.32 Core Modules" level="application" />
     <orderEntry type="library" name="WishlistBackend node_modules" level="project" />
+    <orderEntry type="library" name="Node.js v0.10.21 Core Modules" level="application" />
+    <orderEntry type="library" name="wishlist-backend node_modules" level="project" />
   </component>
 </module>
 
