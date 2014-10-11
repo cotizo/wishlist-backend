@@ -37,7 +37,7 @@ router.post('/register', function(req, res) {
     usersCollection.insert({
         "fbId": fbUserId,
         "token": userToken
-    }, function(err, document) {
+    }, function(err, registeredUser) {
         if(err) {
             throw new Error("There was a problem adding the information to the database", err);
         } else {
@@ -54,13 +54,24 @@ router.post('/register', function(req, res) {
                     var found = registeredFriends.map(function(x) {return x.id}).indexOf(friendsIds[i].id);
                     if(found !=  -1) {
                         console.log("already registered user: " + friendsIds[i].id);
+                        usersCollection.update({_id: registeredUser._id}, {"$push": {"friends": [friendsIds[i].id]}}, function(err, document) {
+                            if(err) {
+                                console.log("cannot add user to friend list");
+                            }
+                        });
                     } else {
                         usersCollection.insert({
-                           "id": friendsIds[i].id,
+                           "fbId": friendsIds[i].id,
                             "token": null //friend not using app yet
-                        }, function(err, document) {
+                        }, function(err, userFriend) {
                             if(err) {
                                 console.log("could not store friend");
+                            } else {
+                                usersCollection.update({_id: registeredUser._id}, {"$push": {"friends": [userFriend.fbId]}}, function(err, document) {
+                                    if(err) {
+                                        console.log("cannot add user to friend list");
+                                    }
+                                });
                             }
                         });
                     }
