@@ -146,7 +146,7 @@ router.get("/getFriends/:fbId", function(req, res, next) {
            if(user) {
                users.find({fbId: { $in: user.friends }}, { "fbId": 1, "name": 1 }, function(err, friendsWithName) {
                    if (!err) {
-                       var ret = friendsWithName.map(function(a) { return { fbId: a.fbId, name: a.name, url: a.url } });
+                       var ret = friendsWithName.map(function(a) { return { id: a.fbId, name: a.name, picture: a.url } });
 
                        res.json(ret);
                    } else {
