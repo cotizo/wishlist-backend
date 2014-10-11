@@ -2,7 +2,7 @@
 var FB = require('fb');
 
 // Load config
-var config = require('config');
+var config = require('./config');
 if(!config.facebook.appId || !config.facebook.appSecret) {
     throw new Error('facebook appId and appSecret required in config.js');
 }

@@ -6,7 +6,7 @@ var users = [
     {
         'wishes': [],
         'name': "Me",
-        'id': "0"
+        'id': "12"
     },
     {
         'wishes': [
@@ -14,7 +14,7 @@ var users = [
             {'id': 2, 'content': "KTHXBYE", 'state': true}
         ],
         'name': "Friend 1",
-        'id': "1"
+        'id': "123"
     },
     {
         'wishes': [
@@ -102,6 +102,26 @@ router.post('/login', function(req, res){
         }
     })
 })
+
+router.get("/getFriends/:fbId", function(req, res) {
+    var fbId = req.params.fbId;
+    var db = req.db;
+    var users = db.get('users');
+
+    users.findOne({"fbId": fbId}, function(err, user) {
+       if(err) {
+           console.log("Cannot get friends for user: " + fbId);
+       } else {
+           if(user) {
+               res.setHeader('Content-Type', 'application-json');
+               res.end(JSON.stringify(user.friends));
+           } else {
+               res.send(400, "Could not find the user [" + fbId + "] in the database");
+           }
+
+       }
+    });
+});
 
 router.post('/addWish', function (req, res) {
     var db = req.db;
