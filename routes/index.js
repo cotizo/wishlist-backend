@@ -269,7 +269,7 @@ router.post("/updateWish/:myId/:wishId", function(req, res, next) {
             next(new Error("Error encountered looking up wish[" + wishId + "] to update", err));
         } else {
             console.log(JSON.stringify(wish, null, 2));
-            res.send(200, "OK");
+            res.status(200).send("OK");
         }
     });
 });
