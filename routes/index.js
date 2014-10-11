@@ -249,34 +249,6 @@ router.post("/buyFriendWish/:myId/:friendId/:wishId", function(req, res, next) {
     });
 });
 
-router.post('/friends/:friendId/setState/:wishId/:state', function (req, res) {
-    var friendId = req.params.friendId;
-    var item = req.params.wishId;
-    var state = req.params.state;
-
-    // validate input
-    if (state != "true" && state != "false") {
-        res.send(400, "Invalid value for parameter state. Use 'true' or 'false'");
-        return;
-    }
-
-    state = state === 'true'; // convert to boolean
-    for (var i=0; i < users.length; ++i) { // find friend
-        if (friendId == users[i].id) {
-            for (var j=0; j<users[i].wishes.length; ++j) {
-                if (item == users[i].wishes[j].id) {
-                    users[i].wishes[j].state = state;
-                    res.send(200, "OK");
-                    return;
-                }
-            }
-
-            res.send(200, "OK"); // executed only if there's no wish with that id
-            return;
-        }
-    }
-});
-
 router.get('/wishes/:fbId/list', function(req, res, next) {
     var db = req.db;
     var fbUserId = req.params.fbId;
