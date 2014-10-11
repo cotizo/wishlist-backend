@@ -10,30 +10,7 @@ var router = express.Router();
 //    }
 //}
 
-var users = [
-    {
-//        'wishes': [],
-        'name': "Me",
-        'id': "12"
-    },
-    {
-//        'wishes': [
-//            {'id': 1, 'content': 'Text here pls.', 'state': false},
-//            {'id': 2, 'content': "KTHXBYE", 'state': true}
-//        ],
-        'name': "Friend 1",
-        'id': "123"
-    },
-    {
-//        'wishes': [
-//            {'id': 3, 'content': "TEST1", 'state': true},
-//            {'id': 4, 'content': "Test2", 'state': false},
-//            {'id': 5, 'content': "Test3", 'state': false}
-//        ],
-        'name': "Friend 2",
-        'id': "1234"
-    }
-];
+users = [];
 
 //router.get('/logout', function(req, res){
 //    // destroy the user's session to log them out
