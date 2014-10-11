@@ -5,6 +5,7 @@ var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 
+var FB = require('./facebook');
 var routes = require('./routes/index');
 
 // Mongo DB
@@ -31,6 +32,12 @@ app.use(function(req,res,next){
     req.db = db;
     next();
 });
+
+// Make the FB object accessible to our router
+app.use(function(req,res,next){
+    req.fb = FB;
+    next();
+})
 
 app.use('/', routes);
 
