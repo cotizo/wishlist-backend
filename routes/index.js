@@ -211,7 +211,7 @@ router.post('/addWish', function (req, res, next) {
     var db = req.db;
 
     var fbId = req.body.id;
-    var content = req.body.content;
+    var content = req.body.wish;
 
     if (!fbId || !content) {
         var errmsg = 'id or wish content not set (got fbId=' + fbId + ', content="' + content + '")';
