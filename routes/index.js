@@ -177,18 +177,19 @@ router.get("/getFriendWishlist/:friendId", function(req, res) {
 router.post('/addWish', function (req, res) {
     var db = req.db;
 
-    var userId = req.body.id;
+    var fbUserId = req.body.fbId;
     var content = req.body.content;
 
-    if (!userId || !content) {
-        throw new Error('id or wish content not set (got id=' + userId + ', content="' + content + '")');
+    if (!fbUserId || !content) {
+        res.status(500).send('id or wish content not set (got fbId=' + fbUserId + ', content="' + content + '")');
+        return;
     }
 
     var wishes = db.get('wishes');
 
     // Submit to the DB
     wishes.insert({
-        "userId": userId,
+        "userId": fbUserId,
         "content" : content,
         "bought" : null
     }, function (err, doc) {
@@ -261,15 +262,16 @@ router.post('/friends/:friendId/setState/:wishId/:state', function (req, res) {
     }
 });
 
-router.get('/wishes/:id/list', function(req, res) {
+router.get('/wishes/:fbId/list', function(req, res, next) {
     var db = req.db;
-    var userId = req.params.id;
-    if (!userId) {
-        throw new Error("id not set, please set to user's internal id");
+    var fbUserId = req.params.fbId;
+    if (!fbUserId) {
+        return next(new Error("id not set, please set to user's internal id"));
     }
     var wishes = db.get('wishes');
-    wishes.find({ "_id": userId }, {}, function(e,data){
+    wishes.find({ "id": fbUserId }, {}, function(e,data){
         res.json(data);
+        next();
     });
 });
 
