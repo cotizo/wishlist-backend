@@ -1,6 +1,7 @@
 var express = require('express');
 var router = express.Router();
 
+
 var users = [
     {
         'wishes': [],
@@ -25,7 +26,6 @@ var users = [
         'id': "1234"
     }
 ];
-var wishId = 10;
 
 router.post('/register', function(req, res) {
     var db = req.db;
@@ -88,25 +88,29 @@ router.post('/login', function(req, res){
 router.post('/addWish', function (req, res) {
     var db = req.db;
 
-    var name = req.body.name;
+    var userId = req.body.id;
     var content = req.body.content;
+
+    if (!userId || !content) {
+        throw new Error('id or wish content not set (got id=' + userId + ', content="' + content + '")');
+    }
 
     var wishes = db.get('wishes');
 
     // Submit to the DB
     wishes.insert({
-        "name" : name,
-        "wishes" :[{
+        "userId": userId,
+        "wish" :[{
             "content" : content,
             "bought" : false
         }]
     }, function (err, doc) {
         if (err) {
             // If it failed, return error
-            res.send("There was a problem adding the information to the database.");
+            throw new Error("There was a problem adding the information to the database.", err);
         }
         else {
-            res.send(200, "OK");
+            res.send("OK");
         }
     });
 });
@@ -155,19 +159,14 @@ router.post('/friends/:friendId/list/:wishId/:state', function (req, res) {
     }
 });
 
-router.get('/wishes', function(req, res) {
-    var db = req.db;
-    var collection = db.get('collection');
-    collection.find({},{},function(e,data){
-        res.json(data);
-    });
-});
-
 router.get('/wishes/:id/list', function(req, res) {
     var db = req.db;
     var userId = req.params.id;
-    var collection = db.get('collection');
-    collection.find({"_id" : userId},function(e,data){
+    if (!userId) {
+        throw new Error("id not set, please set to user's internal id");
+    }
+    var wishes = db.get('wishes');
+    wishes.find({ "_id": userId }, {}, function(e,data){
         res.json(data);
     });
 });
