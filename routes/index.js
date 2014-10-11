@@ -211,8 +211,8 @@ var withUser = function(fbId, req, res, successCb, next) {
 router.post('/addWish', function (req, res, next) {
     var db = req.db;
 
-    var fbId = req.body.fbId;
-    var content = req.body.content;
+    var fbId = req.body.id;
+    var content = req.body.wish;
 
     if (!fbId || !content) {
         var errmsg = 'id or wish content not set (got fbId=' + fbId + ', content="' + content + '")';
@@ -223,11 +223,14 @@ router.post('/addWish', function (req, res, next) {
 
     withUser(fbId, req, res, function(user) {
         console.log("Found user: " + JSON.stringify(user));
-        var newWish = {
-            id: uuid.v4(),
-            content: content,
-            bought: null
-        };
+        //var newWish = {
+        //    id: uuid.v4(),
+        //    content: content,
+        //    bought: null
+        //};
+        var newWish = content;
+        console.log("Got newWish: " + JSON.stringify(newWish) + "; setting its .id")
+        newWish.id = uuid.v4();
         // Insert it back
         var users = db.get('users');
         console.log("Adding new wish for user " + user.fbId + ": " + JSON.stringify(newWish));
@@ -236,21 +239,22 @@ router.post('/addWish', function (req, res, next) {
     }, next);
 });
 
-// Broken - wishes
-//router.post("/buyFriendWish/:myid/:wishid", function(req, res) {
-//    var fbId = req.params.myid;
-//    var wishId = req.params.wishid;
-//    var db = req.db;
-//    var wishes = db.get('wishes');
-//
-//    wishes.update({"_id": wishId}, {"$set" : {"bought": fbId }}, function(err, document) {
-//       if(err) {
-//           console.log("Could not update the buyer of the wish [" + wishId + "]" );
-//       } else {
-//           res.send(200, "OK");
-//       }
-//    });
-//});
+router.post("/buyFriendWish/:myId/:friendId/:wishId", function(req, res, next) {
+    var fbId = req.params.friendId;
+    var buyerId = req.params.myId;
+    var wishId = req.params.wishId;
+    var db = req.db;
+    var users = db.get('users');
+
+    users.update({"fbId": fbId, "wishlist.id": wishId }, {"$set": {"wishlist/.$.bought": buyerId} },  function(err, wish) {
+        if(err) {
+            next(new Error("Error encountered looking up wish[" + wishId + "] to update", err));
+        } else {
+            console.log(JSON.stringify(wish, null, 2));
+            res.send(200, "OK");
+        }
+    });
+});
 
 //router.post('/friends/:friendId/setState/:wishId/:state', function (req, res) {
 //    var friendId = req.params.friendId;
