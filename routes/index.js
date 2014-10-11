@@ -51,6 +51,47 @@ router.post('/register', function(req, res, next) {
     var fb = req.fb;
     fb.setAccessToken(userToken);
 
+    function get_all_my_facebook_friends( tok_or_url, callback, friends_so_far ) {
+
+        friends_so_far = friends_so_far || [];
+
+        if( tok_or_url.substr(0,4) == 'http' ){
+            url = tok_or_url;
+        } else {
+            url = 'https://graph.facebook.com/v2.1/me/friends?limit=20&access_token=' + tok_or_url;
+        }
+
+        // we are going to call this recursively, appending the users as we go
+        // until facebook decides we don't have anymore friends ( so this shouldn't take long )
+        // then we pass that list of friends to the callback
+
+        console.log('fetching... ' + url);
+        require('request')(
+            url,
+            function ( err, resp, body ) {
+                var body = JSON.parse(body),
+                    data = body.data;
+
+                if ( err || body.error ) {
+                    callback( err || body.error );
+                } else {
+
+                    if ( data.length > 0 ) {
+                        // something was returned... keep on keepin on
+                        while ( next = data.pop() ) {
+                            friends_so_far.push( next );
+                        }
+                        get_all_my_facebook_friends( body.paging.next, callback, friends_so_far );
+                    } else {
+                        // we're done! call the callback!
+                        callback( null, friends_so_far );
+                    }
+                }
+            }
+        );
+
+    }
+
     fb.api(fbUserId, function (facebookUser) {
         if(!facebookUser || facebookUser.error) {
             console.log(!facebookUser ? 'error occurred' : facebookUser.error);
@@ -58,8 +99,26 @@ router.post('/register', function(req, res, next) {
         }
 
         console.log("Found USER:");
-        console.log("  " + facebookUser);
-        
+        console.log(JSON.stringify(facebookUser, null, 2))
+
+        //TODO: implement paging
+//        fb.api(fbUserId + "/friends", {limit: 500}, function(facebookFriends) {
+//            console.log(JSON.stringify(facebookFriends, null, 2));
+//        });
+
+        get_all_my_facebook_friends(
+            userToken,
+            function( err, all_my_friends ) {
+                if(err) {
+                    console.log(err);
+                } else {
+                    console.log('All my facebook friends:');
+                    console.log(all_my_friends);
+                    console.log(all_my_friends.length);
+                }
+            }
+        );
+
         //check if user is already registered
         usersCollection.findOne({fbId: fbUserId}, {}, function(err, user) {
             if (!err && !user) {
