@@ -5,7 +5,7 @@ var users = [
     {
         'wishes': [],
         'name': "Me",
-        'id': 0
+        'id': "0"
     },
     {
         'wishes': [
@@ -13,7 +13,7 @@ var users = [
             {'id': 2, 'content': "KTHXBYE", 'state': true}
         ],
         'name': "Friend 1",
-        'id': 1
+        'id': "1"
     },
     {
         'wishes': [
@@ -22,10 +22,68 @@ var users = [
             {'id': 5, 'content': "Test3", 'state': false}
         ],
         'name': "Friend 2",
-        'id': 2
+        'id': "1234"
     }
 ];
 var wishId = 10;
+
+router.post('/register', function(req, res) {
+    var db = req.db;
+    var userId = req.body.id;
+    var userToken = req.body.token;
+    var usersCollection = db.get('users');
+
+    //check if user is already registered
+    usersCollection.insert({
+        "id": userId,
+        "token": userToken
+    }, function(err, document) {
+        if(err) {
+            res.send("There was a problem adding the information to the database");
+        } else {
+            res.send(200, "OK");
+
+            //mock friends insert
+            //null token for fb users who don't use the app yet
+            var friendsIds = [];
+            console.log("STATIC USERS:");
+            for(var i = 0 ; i < users.length; ++i) {
+                console.log("  " + '"' + users[i].id + '"');
+                friendsIds.push({"id": users[i].id});
+            }
+
+            usersCollection.find({"$or": friendsIds}, function(err, registeredFriends) {
+                for(var i = 0; i < registeredFriends.length; ++i) {
+                    console.log("------------");
+                    console.log("registeredFriends[" + i + "].id= " +registeredFriends[i].id);
+                    console.log("registeredFriends[" + i + "].token= " +registeredFriends[i].token);
+                }
+            });
+        }
+    });
+});
+
+router.post('/login', function(req, res){
+    var db = req.db;
+    var userId = req.body.id;
+    var userToken = req.body.token;
+    var users = db.get('users');
+
+    users.findOne({id: userId}, function(err, user) {
+        if(err) {
+            res.send("There was a problem logging in the user");
+        } else {
+            res.send(200, "OK");
+        }
+
+        if(user) {
+            console.log('id:' + user.id);
+            console.log('token:' + user.token);
+        } else {
+            console.log("user logged");
+        }
+    })
+})
 
 router.post('/addWish', function (req, res) {
     var db = req.db;
