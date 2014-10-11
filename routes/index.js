@@ -202,9 +202,9 @@ router.post('/addWish', function (req, res) {
     });
 });
 
-router.post("/buyFriendWish", function(req, res) {
-    var fbId = req.body.fbId;
-    var wishId = req.body.wishId;
+router.post("/buyFriendWish/:myid/:wishid", function(req, res) {
+    var fbId = req.params.myid;
+    var wishId = req.params.wishid;
     var db = req.db;
     var wishes = db.get('wishes');
 
