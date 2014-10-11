@@ -222,7 +222,7 @@ router.post('/addWish', function (req, res, next) {
 
     withUser(fbId, req, res, function(user) {
         console.log("Found user: " + JSON.stringify(user));
-        var newWish = { content: content, bought: null };
+        var newWish = content;
         // Insert it back
         var users = db.get('users');
         console.log("Adding new wish for user " + user.fbId + ": " + JSON.stringify(newWish));
