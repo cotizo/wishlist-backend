@@ -1,5 +1,6 @@
 var express = require('express');
 var router = express.Router();
+var _ = require('underscore');
 
 
 //function restrict(req, res, next) {
@@ -59,8 +60,8 @@ router.post('/register', function(req, res, next) {
             return;
         }
 
-        console.log("Found USER:");
-        console.log(JSON.stringify(facebookUser, null, 2))
+        console.log("Attempting to register the Facebook user: id=" + fbUserId + " name=" + facebookUser.name + " username=" + facebookUser.username);
+//        console.log(JSON.stringify(facebookUser, null, 2));
 
         //check if user is already registered
         usersCollection.findOne({fbId: fbUserId}, {}, function(err, user) {
@@ -74,31 +75,33 @@ router.post('/register', function(req, res, next) {
                     if (err) {
                         return next(new Error("There was a problem adding the information to the database", err));
                     } else {
-                        res.send("OK");
+                        // Ok but now let's make all the friend associations
 
                         usersCollection.find({}, function(err, allRegisteredUsers) {
-                            for(var i = 0; i < allRegisteredUsers.length; ++i) {
-                                if(allRegisteredUsers[i].fbId != fbUserId) {
-                                    console.log("Registered User: " + allRegisteredUsers[i].name);
-                                    var currentRegisteredUserId = allRegisteredUsers[i].fbId;
-                                    fb.api(fbUserId + "/friends/" + allRegisteredUsers[i].fbId, function(friend) {
+                            // This must not be a for loop! :) Trust meh
+                            _.each(allRegisteredUsers, function(potentialFriend) {
+
+                                if(potentialFriend.fbId != fbUserId) {
+                                    console.log("Registering ["+ fbUserId +"]: Checking whether registered user " + potentialFriend.name + " [" + potentialFriend.fbId + "] is a friend");
+                                    var currentRegisteredUserId = potentialFriend.fbId;
+                                    fb.api(fbUserId + "/friends/" + potentialFriend.fbId, function(friend) {
                                         if(!friend || friend.error || friend.type == 'OAuthException') {
                                             console.log(!friend ? 'error occurred' : friend.error);
                                             return;
                                         }
 
-                                        console.log(JSON.stringify(friend, null, 2))
-                                        console.log("Length: " + friend.data.length);
+//                                        console.log("/" + fbUserId + "/friends/" + currentRegisteredUserId + " returned " + JSON.stringify(friend, null, 2));
+//                                        console.log("Length of .data: " + friend.data.length);
 
                                         if(friend.data.length > 0) {
                                             if(friend.data[0].id == currentRegisteredUserId) {
                                                 //they are friends
                                                 //update both friends lists
-                                                usersCollection.update({fbId: currentRegisteredUserId}, {"$push": {"friends": [fbUserId]}}, function (err, document) {
+                                                usersCollection.update({fbId: currentRegisteredUserId}, {"$push": {"friends": fbUserId }}, function (err, document) {
                                                     if (err) {
                                                         return next(new Error("Could not add user [" + fbUserId + "] as friend of user [" + currentRegisteredUserId + "]", err));
                                                     } else {
-                                                        usersCollection.update({fbId: fbUserId}, {"$push": {"friends": [currentRegisteredUserId]}}, function(err, document) {
+                                                        usersCollection.update({fbId: fbUserId}, {"$push": {"friends": currentRegisteredUserId}}, function(err, document) {
                                                             if(err) {
                                                                 return next(new Error("Could not add user [" + currentRegisteredUserId+ "] as friend of user [" + fbUserId + "]", err));
                                                             }
@@ -110,10 +113,10 @@ router.post('/register', function(req, res, next) {
                                             console.log("Users [" + fbUserId + "] and [" + currentRegisteredUserId + "] are not friends!");
                                         }
 
-                                    })
+                                    });
                                 }
-
-                             }
+                            });
+                            res.send("OK");
                         })
                     }
                 }); // end user-found
