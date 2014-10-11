@@ -2,13 +2,13 @@ var express = require('express');
 var router = express.Router();
 
 
-function restrict(req, res, next) {
-    if (req.session.user) {
-        next();
-    } else {
-        next (new Error('Access denied - not logged in!'));
-    }
-}
+//function restrict(req, res, next) {
+//    if (req.session.user) {
+//        next();
+//    } else {
+//        next (new Error('Access denied - not logged in!'));
+//    }
+//}
 
 var users = [
     {
@@ -35,13 +35,12 @@ var users = [
     }
 ];
 
-router.get('/logout', function(req, res){
-    // destroy the user's session to log them out
-    // will be re-created next request
-    req.session.destroy(function(){
-        res.send("Logged out");
-    });
-});
+//router.get('/logout', function(req, res){
+//    // destroy the user's session to log them out
+//    // will be re-created next request
+//    req.session = null;
+//    res.send("Logged out");
+//});
 
 router.post('/register', function(req, res, next) {
     var db = req.db;
@@ -109,32 +108,32 @@ router.post('/register', function(req, res, next) {
     });
 });
 
-router.post('/login', function(req, res, next){
-    var db = req.db;
-    var fbUserId = req.body.fbId;
-    var userToken = req.body.token;
-    var users = db.get('users');
-
-    if (!fbUserId) {
-        return next(new Error("Please provide fbId"));
-    }
-    console.log('fbUserId passed is: ' + fbUserId);
-
-    users.findOne({fbId: fbUserId}, function(err, user) {
-        if(err) {
-            return next(new Error("There was a problem logging in the user", err));
-        } else if (user) {
-            console.log('fbId:' + user.fbId);
-            console.log('token:' + user.token);
-            
-            req.session.user = user;
-            res.send("OK");
-        } else {
-            return next(new Error("User does not exist"));
-        }
-        next();
-    })
-})
+//router.post('/login', function(req, res, next){
+//    var db = req.db;
+//    var fbUserId = req.body.fbId;
+//    var userToken = req.body.token;
+//    var users = db.get('users');
+//
+//    if (!fbUserId) {
+//        return next(new Error("Please provide fbId"));
+//    }
+//    console.log('fbUserId passed is: ' + fbUserId);
+//
+//    users.findOne({fbId: fbUserId}, function(err, user) {
+//        if(err) {
+//            return next(new Error("There was a problem logging in the user", err));
+//        } else if (user) {
+//            console.log('fbId:' + user.fbId);
+//            console.log('token:' + user.token);
+//
+//            req.session.user = user;
+//            res.send("OK");
+//        } else {
+//            return next(new Error("User does not exist"));
+//        }
+//        next();
+//    })
+//})
 
 router.get("/getFriends/:fbId", function(req, res) {
     var fbId = req.params.fbId;
