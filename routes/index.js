@@ -12,24 +12,24 @@ function restrict(req, res, next) {
 
 var users = [
     {
-        'wishes': [],
+//        'wishes': [],
         'name': "Me",
         'id': "12"
     },
     {
-        'wishes': [
-            {'id': 1, 'content': 'Text here pls.', 'state': false},
-            {'id': 2, 'content': "KTHXBYE", 'state': true}
-        ],
+//        'wishes': [
+//            {'id': 1, 'content': 'Text here pls.', 'state': false},
+//            {'id': 2, 'content': "KTHXBYE", 'state': true}
+//        ],
         'name': "Friend 1",
         'id': "123"
     },
     {
-        'wishes': [
-            {'id': 3, 'content': "TEST1", 'state': true},
-            {'id': 4, 'content': "Test2", 'state': false},
-            {'id': 5, 'content': "Test3", 'state': false}
-        ],
+//        'wishes': [
+//            {'id': 3, 'content': "TEST1", 'state': true},
+//            {'id': 4, 'content': "Test2", 'state': false},
+//            {'id': 5, 'content': "Test3", 'state': false}
+//        ],
         'name': "Friend 2",
         'id': "1234"
     }
@@ -43,57 +43,69 @@ router.get('/logout', function(req, res){
     });
 });
 
-router.post('/register', function(req, res) {
+router.post('/register', function(req, res, next) {
     var db = req.db;
     var fbUserId = req.body.fbId;
     var userToken = req.body.token;
     var usersCollection = db.get('users');
 
     //check if user is already registered
-    usersCollection.insert({
-        "fbId": fbUserId,
-        "token": userToken
-    }, function(err, registeredUser) {
-        if(err) {
-            throw new Error("There was a problem adding the information to the database", err);
-        } else {
-            res.send("OK");
+    usersCollection.findOne({fbId: fbUserId}, {}, function(err, user) {
+        if (!err && !user) {
+            //  User is not in the db. Insert the user.
+            usersCollection.insert({
+                "fbId": fbUserId,
+                "token": userToken
+            }, function (err, registeredUser) {
+                if (err) {
+                    return next(new Error("There was a problem adding the information to the database", err));
+                } else {
+                    res.send("OK");
 
-            //mock friends insert
-            var friendsIds = [];
-            for(var i = 0 ; i < users.length; ++i) {
-               friendsIds.push({"id": users[i].id});
-            }
+                    //mock friends insert
+                    var friendsIds = [];
+                    for (var i = 0; i < users.length; ++i) {
+                        friendsIds.push({"id": users[i].id});
+                    }
 
-            usersCollection.find({"$or": friendsIds}, function(err, registeredFriends) {
-                for(var i = 0; i < friendsIds.length; ++i) {
-                    var found = registeredFriends.map(function(x) {return x.id}).indexOf(friendsIds[i].id);
-                    if(found !=  -1) {
-                        console.log("already registered user: " + friendsIds[i].id);
-                        usersCollection.update({_id: registeredUser._id}, {"$push": {"friends": [friendsIds[i].id]}}, function(err, document) {
-                            if(err) {
-                                console.log("cannot add user to friend list");
-                            }
-                        });
-                    } else {
-                        usersCollection.insert({
-                           "fbId": friendsIds[i].id,
-                            "token": null //friend not using app yet
-                        }, function(err, userFriend) {
-                            if(err) {
-                                console.log("could not store friend");
-                            } else {
-                                usersCollection.update({_id: registeredUser._id}, {"$push": {"friends": [userFriend.fbId]}}, function(err, document) {
-                                    if(err) {
+                    usersCollection.find({"$or": friendsIds}, function (err, registeredFriends) {
+                        for (var i = 0; i < friendsIds.length; ++i) {
+                            var found = registeredFriends.map(function (x) {
+                                return x.id
+                            }).indexOf(friendsIds[i].id);
+                            if (found != -1) {
+                                console.log("already registered user: " + friendsIds[i].id);
+                                usersCollection.update({_id: registeredUser._id}, {"$push": {"friends": [friendsIds[i].id]}}, function (err, document) {
+                                    if (err) {
                                         console.log("cannot add user to friend list");
                                     }
                                 });
+                            } else {
+                                usersCollection.insert({
+                                    "fbId": friendsIds[i].id,
+                                    "token": null //friend not using app yet
+                                }, function (err, userFriend) {
+                                    if (err) {
+                                        console.log("could not store friend");
+                                    } else {
+                                        usersCollection.update({_id: registeredUser._id}, {"$push": {"friends": [userFriend.fbId]}}, function (err, document) {
+                                            if (err) {
+                                                console.log("cannot add user to friend list");
+                                            }
+                                        });
+                                    }
+                                });
                             }
-                        });
-                    }
+                        }
+                    });
                 }
-            });
-        }
+            }); // end user-found
+        } else if (user) {
+            next(new Error("User is already registered."));
+        } else if (err) {
+            next(new Error("Couldn't verify if user was already registered", err));
+        } else
+            next();
     });
 });
 
