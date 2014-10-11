@@ -145,8 +145,7 @@ router.get("/getFriends/:fbId", function(req, res) {
            console.log("Cannot get friends for user: " + fbId);
        } else {
            if(user) {
-               res.setHeader('Content-Type', 'application-json');
-               res.end(JSON.stringify(user.friends));
+               res.json(user.friends);
            } else {
                res.send(400, "Could not find the user [" + fbId + "] in the database");
            }
@@ -216,12 +215,6 @@ router.post("/buyFriendWish", function(req, res) {
            res.send(200, "OK");
        }
     });
-});
-
-router.get('/friends', function (req, res) {
-    var friend1 = users[1].id;
-    var friend2 = users[2].id;
-    res.json([friend1, friend2]);
 });
 
 router.get('/friends/:id/list', function (req, res) {
