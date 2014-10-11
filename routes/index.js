@@ -35,7 +35,7 @@ router.post('/register', function(req, res, next) {
         }
 
         console.log("Found USER:");
-        console.log("  " + facebookUser);
+        console.log("  " + JSON.stringify(facebookUser));
         
         //check if user is already registered
         usersCollection.findOne({fbId: fbUserId}, {}, function(err, user) {
