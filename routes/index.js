@@ -210,7 +210,7 @@ var withUser = function(fbId, req, res, successCb, next) {
 router.post('/addWish', function (req, res, next) {
     var db = req.db;
 
-    var fbId = req.body.fbId;
+    var fbId = req.body.id;
     var content = req.body.content;
 
     if (!fbId || !content) {
