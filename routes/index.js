@@ -147,6 +147,7 @@ router.get("/getFriends/:fbId", function(req, res, next) {
                users.find({fbId: { $in: user.friends }}, { "fbId": 1, "name": 1 }, function(err, friendsWithName) {
                    if (!err) {
                        var ret = friendsWithName.map(function(a) { return { fbId: a.fbId, name: a.name, url: a.url } });
+
                        res.json(ret);
                    } else {
                        next(new Error("Couldn't get the names of " + fbId + "'s friends (which are: "+ user.friends + ")", err));
@@ -210,25 +211,21 @@ router.post('/addWish', function (req, res, next) {
     var db = req.db;
 
     var fbId = req.body.id;
-    var content = req.body.wish;
+    var wish = JSON.parse(req.body.wish);
 
-    if (!fbId || !content) {
-        var errmsg = 'id or wish content not set (got fbId=' + fbId + ', content="' + content + '")';
+    if (!fbId || !wish) {
+        var errmsg = 'id or wish wish not set (got fbId=' + fbId + ', wish="' + wish + '")';
         console.error(errmsg);
-        res.status(500, errmsg);
+        res.status(500).send(errmsg);
         return;
     }
 
     withUser(fbId, req, res, function(user) {
         console.log("Found user: " + JSON.stringify(user));
-        //var newWish = {
-        //    id: uuid.v4(),
-        //    content: content,
-        //    bought: null
-        //};
-        var newWish = content;
-        console.log("Got newWish: " + JSON.stringify(newWish) + "; setting its .id")
+        var newWish = wish;
+        console.log("Got newWish: " + JSON.stringify(newWish) + "; setting its .id and .bought to null");
         newWish.id = uuid.v4();
+        newWish.bought = null;
         // Insert it back
         var users = db.get('users');
         console.log("Adding new wish for user " + user.fbId + ": " + JSON.stringify(newWish));
@@ -244,7 +241,7 @@ router.post("/buyFriendWish/:myId/:friendId/:wishId", function(req, res, next) {
     var db = req.db;
     var users = db.get('users');
 
-    users.update({"fbId": fbId, "wishlist.id": wishId }, {"$set": {"wishlist/.$.bought": buyerId} },  function(err, wish) {
+    users.update({"fbId": fbId, "wishlist.id": wishId }, {"$set": {"wishlist.$.bought": buyerId} },  function(err, wish) {
         if(err) {
             next(new Error("Error encountered looking up wish[" + wishId + "] to update", err));
         } else {
@@ -254,5 +251,29 @@ router.post("/buyFriendWish/:myId/:friendId/:wishId", function(req, res, next) {
     });
 });
 
+router.post("/updateWish/:myId/:wishId", function(req, res, next) {
+    var fbId = req.params.myId;
+    var wishId = req.params.wishId;
+    var changedFields = JSON.parse(req.body.wish);
+    var db = req.db;
+    var users = db.get('users');
+
+    doUpdate(users, {"fbId": fbId, "wishlist.id": wishId }, "wishlist.$", changedFields, function(err, wish) {
+        if(err) {
+            next(new Error("Error encountered looking up wish[" + wishId + "] to update", err));
+        } else {
+            console.log(JSON.stringify(wish, null, 2));
+            res.status(200).send("OK");
+        }
+    });
+});
+
+/** Updates only the `changedFields` inside the document that can be found at `objectPrefix` after running the
+ * `query` on `coll`. */
+var doUpdate = function(coll, query, objectPrefix, changedFields, cb) {
+    var updates = {};
+    _.forEach(changedFields, function(val, key) { updates[objectPrefix + "." + key] = val; });
+    return coll.update(query, { $set: updates }, cb);
+};
 
 module.exports = router;
