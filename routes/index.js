@@ -44,19 +44,26 @@ router.post('/register', function(req, res) {
             res.send("OK");
 
             //mock friends insert
-            //null token for fb users who don't use the app yet
             var friendsIds = [];
-            console.log("STATIC USERS:");
             for(var i = 0 ; i < users.length; ++i) {
-                console.log("  " + '"' + users[i].id + '"');
-                friendsIds.push({"id": users[i].id});
+               friendsIds.push({"id": users[i].id});
             }
 
             usersCollection.find({"$or": friendsIds}, function(err, registeredFriends) {
-                for(var i = 0; i < registeredFriends.length; ++i) {
-                    console.log("------------");
-                    console.log("registeredFriends[" + i + "].id= " +registeredFriends[i].id);
-                    console.log("registeredFriends[" + i + "].token= " +registeredFriends[i].token);
+                for(var i = 0; i < friendsIds.length; ++i) {
+                    var found = registeredFriends.map(function(x) {return x.id}).indexOf(friendsIds[i].id);
+                    if(found !=  -1) {
+                        console.log("already registered user: " + friendsIds[i].id);
+                    } else {
+                        usersCollection.insert({
+                           "id": friendsIds[i].id,
+                            "token": null //friend not using app yet
+                        }, function(err, document) {
+                            if(err) {
+                                console.log("could not store friend");
+                            }
+                        });
+                    }
                 }
             });
         }
