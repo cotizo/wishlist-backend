@@ -18,6 +18,7 @@
     "mongodb": "*",
     "monk": "*",
     "request": "*",
-    "underscore": "1.7.0"
+    "underscore": "1.7.0",
+    "node-uuid": "*"
   }
 }

@@ -1,6 +1,7 @@
 var express = require('express');
 var router = express.Router();
 var _ = require('underscore');
+var uuid = require('node-uuid');
 
 
 //function restrict(req, res, next) {
@@ -222,7 +223,11 @@ router.post('/addWish', function (req, res, next) {
 
     withUser(fbId, req, res, function(user) {
         console.log("Found user: " + JSON.stringify(user));
-        var newWish = { content: content, bought: null };
+        var newWish = {
+            id: uuid.v4(),
+            content: content,
+            bought: null
+        };
         // Insert it back
         var users = db.get('users');
         console.log("Adding new wish for user " + user.fbId + ": " + JSON.stringify(newWish));
@@ -232,62 +237,62 @@ router.post('/addWish', function (req, res, next) {
 });
 
 // Broken - wishes
-router.post("/buyFriendWish/:myid/:wishid", function(req, res) {
-    var fbId = req.params.myid;
-    var wishId = req.params.wishid;
-    var db = req.db;
-    var wishes = db.get('wishes');
+//router.post("/buyFriendWish/:myid/:wishid", function(req, res) {
+//    var fbId = req.params.myid;
+//    var wishId = req.params.wishid;
+//    var db = req.db;
+//    var wishes = db.get('wishes');
+//
+//    wishes.update({"_id": wishId}, {"$set" : {"bought": fbId }}, function(err, document) {
+//       if(err) {
+//           console.log("Could not update the buyer of the wish [" + wishId + "]" );
+//       } else {
+//           res.send(200, "OK");
+//       }
+//    });
+//});
 
-    wishes.update({"_id": wishId}, {"$set" : {"bought": fbId }}, function(err, document) {
-       if(err) {
-           console.log("Could not update the buyer of the wish [" + wishId + "]" );
-       } else {
-           res.send(200, "OK");
-       }
-    });
-});
-
-router.post('/friends/:friendId/setState/:wishId/:state', function (req, res) {
-    var friendId = req.params.friendId;
-    var item = req.params.wishId;
-    var state = req.params.state;
-
-    // validate input
-    if (state != "true" && state != "false") {
-        res.send(400, "Invalid value for parameter state. Use 'true' or 'false'");
-        return;
-    }
-
-    state = state === 'true'; // convert to boolean
-    for (var i=0; i < users.length; ++i) { // find friend
-        if (friendId == users[i].id) {
-            for (var j=0; j<users[i].wishes.length; ++j) {
-                if (item == users[i].wishes[j].id) {
-                    users[i].wishes[j].state = state;
-                    res.send(200, "OK");
-                    return;
-                }
-            }
-
-            res.send(200, "OK"); // executed only if there's no wish with that id
-            return;
-        }
-    }
-});
-
-router.get('/wishes/:fbId/list', function(req, res, next) {
-    var db = req.db;
-    var fbUserId = req.params.fbId;
-    if (!fbUserId) {
-        return next(new Error("fbId not set, please set to user's facebook id"));
-    }
-    var wishes = db.get('wishes');
-    wishes.find({ "id": fbUserId }, {}, function(e, data){
-        if (e) { console.error(e); res.send(400); return; } // cause it's okay to test for errors.
-        res.json(data);
-        next();
-    });
-});
+//router.post('/friends/:friendId/setState/:wishId/:state', function (req, res) {
+//    var friendId = req.params.friendId;
+//    var item = req.params.wishId;
+//    var state = req.params.state;
+//
+//    // validate input
+//    if (state != "true" && state != "false") {
+//        res.send(400, "Invalid value for parameter state. Use 'true' or 'false'");
+//        return;
+//    }
+//
+//    state = state === 'true'; // convert to boolean
+//    for (var i=0; i < users.length; ++i) { // find friend
+//        if (friendId == users[i].id) {
+//            for (var j=0; j<users[i].wishes.length; ++j) {
+//                if (item == users[i].wishes[j].id) {
+//                    users[i].wishes[j].state = state;
+//                    res.send(200, "OK");
+//                    return;
+//                }
+//            }
+//
+//            res.send(200, "OK"); // executed only if there's no wish with that id
+//            return;
+//        }
+//    }
+//});
+//
+//router.get('/wishes/:fbId/list', function(req, res, next) {
+//    var db = req.db;
+//    var fbUserId = req.params.fbId;
+//    if (!fbUserId) {
+//        return next(new Error("fbId not set, please set to user's facebook id"));
+//    }
+//    var wishes = db.get('wishes');
+//    wishes.find({ "id": fbUserId }, {}, function(e, data){
+//        if (e) { console.error(e); res.send(400); return; } // cause it's okay to test for errors.
+//        res.json(data);
+//        next();
+//    });
+//});
 
 
 module.exports = router;
