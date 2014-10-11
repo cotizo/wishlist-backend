@@ -274,6 +274,8 @@ router.post("/updateWish/:myId/:wishId", function(req, res, next) {
     });
 });
 
+/** Updates only the `changedFields` inside the document that can be found at `objectPrefix` after running the
+ * `query` on `coll`. */
 var doUpdate = function(coll, query, objectPrefix, changedFields, cb) {
     var updates = {};
     _.forEach(changedFields, function(val, key) { updates[objectPrefix + "." + key] = val; });
