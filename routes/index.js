@@ -257,5 +257,27 @@ router.post("/buyFriendWish/:myId/:friendId/:wishId", function(req, res, next) {
     });
 });
 
+router.post("/updateWish/:myId/:wishId", function(req, res, next) {
+    var fbId = req.params.myId;
+    var wishId = req.params.wishId;
+    var changedFields = JSON.parse(req.body.wish);
+    var db = req.db;
+    var users = db.get('users');
+
+    doUpdate(users, {"fbId": fbId, "wishlist.id": wishId }, "wishlist.$", changedFields, function(err, wish) {
+        if(err) {
+            next(new Error("Error encountered looking up wish[" + wishId + "] to update", err));
+        } else {
+            console.log(JSON.stringify(wish, null, 2));
+            res.send(200, "OK");
+        }
+    });
+});
+
+var doUpdate = function(coll, query, objectPrefix, changedFields, cb) {
+    var updates = {};
+    _.forEach(changedFields, function(val, key) { updates[objectPrefix + "." + key] = val; });
+    return coll.update(query, { $set: updates }, cb);
+};
 
 module.exports = router;
