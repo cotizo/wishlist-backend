@@ -191,7 +191,7 @@ var withUser = function(fbId, req, res, successCb, next) {
             if(user) {
                 var ret = successCb(user);
                 if (ret !== undefined)
-                    next(null, ret);
+                    next(ret);
             } else {
                 res.send(400, "Could not find the user [" + fbId + "] in the database");
             }
