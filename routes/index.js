@@ -248,7 +248,7 @@ router.post("/buyFriendWish/:myId/:friendId/:wishId", function(req, res, next) {
     var db = req.db;
     var users = db.get('users');
 
-    users.update({"fbId": fbId, "wishlist.id": wishId }, {"$set": {"wishlist/.$.bought": buyerId} },  function(err, wish) {
+    users.update({"fbId": fbId, "wishlist.id": wishId }, {"$set": {"wishlist.$.bought": buyerId} },  function(err, wish) {
         if(err) {
             next(new Error("Error encountered looking up wish[" + wishId + "] to update", err));
         } else {
