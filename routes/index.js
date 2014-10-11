@@ -27,14 +27,30 @@ var users = [
 ];
 var wishId = 10;
 
-router.post('/wish', function (req, res) {
-    var me = users[0];
-    var wish = req.body;
-    wishId = wishId + 1; // generate a new wish Id, normally handled by database
-    wish.id = wishId;
-    wish.state = false;
-    me.wishes.push(wish);
-    res.send(200, "OK");
+router.post('/addWish', function (req, res) {
+    var db = req.db;
+
+    var name = req.body.name;
+    var content = req.body.content;
+
+    var wishes = db.get('wishes');
+
+    // Submit to the DB
+    wishes.insert({
+        "name" : name,
+        "wishes" :[{
+            "content" : content,
+            "bought" : false
+        }]
+    }, function (err, doc) {
+        if (err) {
+            // If it failed, return error
+            res.send("There was a problem adding the information to the database.");
+        }
+        else {
+            res.send(200, "OK");
+        }
+    });
 });
 
 router.get('/friends', function (req, res) {
@@ -80,5 +96,23 @@ router.post('/friends/:friendId/list/:wishId/:state', function (req, res) {
         }
     }
 });
+
+router.get('/wishes', function(req, res) {
+    var db = req.db;
+    var collection = db.get('collection');
+    collection.find({},{},function(e,data){
+        res.json(data);
+    });
+});
+
+router.get('/wishes/:id/list', function(req, res) {
+    var db = req.db;
+    var userId = req.params.id;
+    var collection = db.get('collection');
+    collection.find({"_id" : userId},function(e,data){
+        res.json(data);
+    });
+});
+
 
 module.exports = router;
