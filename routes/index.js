@@ -12,8 +12,6 @@ var uuid = require('node-uuid');
 //    }
 //}
 
-users = [];
-
 //router.get('/logout', function(req, res){
 //    // destroy the user's session to log them out
 //    // will be re-created next request
