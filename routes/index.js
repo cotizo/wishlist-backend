@@ -10,30 +10,7 @@ var router = express.Router();
 //    }
 //}
 
-var users = [
-    {
-//        'wishes': [],
-        'name': "Me",
-        'id': "12"
-    },
-    {
-//        'wishes': [
-//            {'id': 1, 'content': 'Text here pls.', 'state': false},
-//            {'id': 2, 'content': "KTHXBYE", 'state': true}
-//        ],
-        'name': "Friend 1",
-        'id': "123"
-    },
-    {
-//        'wishes': [
-//            {'id': 3, 'content': "TEST1", 'state': true},
-//            {'id': 4, 'content': "Test2", 'state': false},
-//            {'id': 5, 'content': "Test3", 'state': false}
-//        ],
-        'name': "Friend 2",
-        'id': "1234"
-    }
-];
+users = [];
 
 //router.get('/logout', function(req, res){
 //    // destroy the user's session to log them out
@@ -48,64 +25,84 @@ router.post('/register', function(req, res, next) {
     var userToken = req.body.token;
     var usersCollection = db.get('users');
 
-    //check if user is already registered
-    usersCollection.findOne({fbId: fbUserId}, {}, function(err, user) {
-        if (!err && !user) {
-            //  User is not in the db. Insert the user.
-            usersCollection.insert({
-                "fbId": fbUserId,
-                "token": userToken
-            }, function (err, registeredUser) {
-                if (err) {
-                    return next(new Error("There was a problem adding the information to the database", err));
-                } else {
-                    res.send("OK");
+    var fb = req.fb;
+    fb.setAccessToken(userToken);
 
-                    //mock friends insert
-                    var friendsIds = [];
-                    for (var i = 0; i < users.length; ++i) {
-                        friendsIds.push({"id": users[i].id});
-                    }
+    fb.api(fbUserId, function (facebookUser) {
+        if(!facebookUser || facebookUser.error) {
+            console.log(!facebookUser ? 'error occurred' : facebookUser.error);
+            return;
+        }
 
-                    usersCollection.find({"$or": friendsIds}, function (err, registeredFriends) {
-                        for (var i = 0; i < friendsIds.length; ++i) {
-                            var found = registeredFriends.map(function (x) {
-                                return x.id
-                            }).indexOf(friendsIds[i].id);
-                            if (found != -1) {
-                                console.log("already registered user: " + friendsIds[i].id);
-                                usersCollection.update({_id: registeredUser._id}, {"$push": {"friends": [friendsIds[i].id]}}, function (err, document) {
-                                    if (err) {
-                                        console.log("cannot add user to friend list");
-                                    }
-                                });
-                            } else {
-                                usersCollection.insert({
-                                    "fbId": friendsIds[i].id,
-                                    "token": null //friend not using app yet
-                                }, function (err, userFriend) {
-                                    if (err) {
-                                        console.log("could not store friend");
-                                    } else {
-                                        usersCollection.update({_id: registeredUser._id}, {"$push": {"friends": [userFriend.fbId]}}, function (err, document) {
-                                            if (err) {
-                                                console.log("cannot add user to friend list");
-                                            }
-                                        });
-                                    }
-                                });
-                            }
+        console.log("Found USER:");
+        console.log("  " + facebookUser);
+        
+        //check if user is already registered
+        usersCollection.findOne({fbId: fbUserId}, {}, function(err, user) {
+            if (!err && !user) {
+                //  User is not in the db. Insert the user.
+                usersCollection.insert({
+                    "fbId": facebookUser.id,
+                    "name": facebookUser.name,
+                    "token": userToken,
+                    "wishlist": [],
+                    "friends": []
+                }, function (err, registeredUser) {
+                    if (err) {
+                        return next(new Error("There was a problem adding the information to the database", err));
+                    } else {
+                        res.send("OK");
+
+                        //mock friends insert
+                        var friendsIds = [];
+                        for (var i = 0; i < users.length; ++i) {
+                            friendsIds.push({"id": users[i].id});
                         }
-                    });
-                }
-            }); // end user-found
-        } else if (user) {
-            next(new Error("User is already registered."));
-        } else if (err) {
-            next(new Error("Couldn't verify if user was already registered", err));
-        } else
-            next();
+
+                        usersCollection.find({"$or": friendsIds}, function (err, registeredFriends) {
+                            for (var i = 0; i < friendsIds.length; ++i) {
+                                var found = registeredFriends.map(function (x) {
+                                    return x.id
+                                }).indexOf(friendsIds[i].id);
+                                if (found != -1) {
+                                    console.log("already registered user: " + friendsIds[i].id);
+                                    usersCollection.update({_id: registeredUser._id}, {"$push": {"friends": [friendsIds[i].id]}}, function (err, document) {
+                                        if (err) {
+                                            console.log("cannot add user to friend list");
+                                        }
+                                    });
+                                } else {
+                                    usersCollection.insert({
+                                        "fbId": friendsIds[i].id,
+                                        "token": null //friend not using app yet
+                                    }, function (err, userFriend) {
+                                        if (err) {
+                                            console.log("could not store friend");
+                                        } else {
+                                            usersCollection.update({_id: registeredUser._id}, {"$push": {"friends": [userFriend.fbId]}}, function (err, document) {
+                                                if (err) {
+                                                    console.log("cannot add user to friend list");
+                                                }
+                                            });
+                                        }
+                                    });
+                                }
+                            }
+                        });
+                    }
+                }); // end user-found
+            } else if (user) {
+                next(new Error("User is already registered."));
+            } else if (err) {
+                next(new Error("Couldn't verify if user was already registered", err));
+            } else
+                next();
+        });
+
+
     });
+
+
 });
 
 //router.post('/login', function(req, res, next){
@@ -145,8 +142,7 @@ router.get("/getFriends/:fbId", function(req, res) {
            console.log("Cannot get friends for user: " + fbId);
        } else {
            if(user) {
-               res.setHeader('Content-Type', 'application-json');
-               res.end(JSON.stringify(user.friends));
+               res.json(user.friends);
            } else {
                res.send(400, "Could not find the user [" + fbId + "] in the database");
            }
@@ -155,18 +151,21 @@ router.get("/getFriends/:fbId", function(req, res) {
     });
 });
 
-router.get("/getFriendWishlist/:friendId", function(req, res) {
-    var friendId = req.params.friendId;
+router.get("/getFriendWishlist/:fbId", function(req, res, next) {
+    var fbId = req.params.fbId; // friend's id
+    if (!fbId) {
+        return next(new Error("fbId not set, please set to user's facebook id"));
+    }
+
     var db = req.db;
     var users = db.get('users');
 
-    users.findOne({"fbId": friendId}, function(err, user) {
+    users.findOne({"fbId": fbId}, function(err, user) {
         if(err) {
-            console.log("Cannot get friend's [" + friendId + "] wishlist");
+            return next(new Error("Error encountered looking up fb user [" + fbId + "]"), err);
         } else {
             if(user) {
-                res.setHeader('Content-Type', 'application-json');
-                res.end(JSON.stringify(user.wishlist));
+                res.json(user.wishlist);
             } else {
                 res.send(400, "Could not find the user [" + friendId + "] in the database");
             }
@@ -174,38 +173,55 @@ router.get("/getFriendWishlist/:friendId", function(req, res) {
     });
 });
 
-router.post('/addWish', function (req, res) {
+
+// Passes only the user to successCb
+var withUser = function(fbId, req, res, successCb, next) {
+    if (!fbId) {
+        return next(new Error('fbId to look up was not specified'));
+    }
+    var db = req.db;
+    var users = db.get('users');
+    users.findOne({"fbId": fbId}, function(err, user) {
+        if(err) {
+            next(new Error("Error encountered looking up fb user [" + fbId + "]", err));
+        } else {
+            if(user) {
+                var ret = successCb(user);
+                if (ret !== undefined)
+                    next(ret);
+            } else {
+                res.send(400, "Could not find the user [" + fbId + "] in the database");
+            }
+        }
+    });
+};
+
+router.post('/addWish', function (req, res, next) {
     var db = req.db;
 
-    var fbUserId = req.body.fbId;
+    var fbId = req.body.fbId;
     var content = req.body.content;
 
-    if (!fbUserId || !content) {
-        res.status(500).send('id or wish content not set (got fbId=' + fbUserId + ', content="' + content + '")');
+    if (!fbId || !content) {
+        res.status(500).send('id or wish content not set (got fbId=' + fbId + ', content="' + content + '")');
         return;
     }
 
-    var wishes = db.get('wishes');
-
-    // Submit to the DB
-    wishes.insert({
-        "userId": fbUserId,
-        "content" : content,
-        "bought" : null
-    }, function (err, doc) {
-        if (err) {
-            // If it failed, return error
-            throw new Error("There was a problem adding the information to the database.", err);
-        }
-        else {
-            res.send("OK");
-        }
-    });
+    withUser(fbId, req, res, function(user) {
+        console.log("Found user: " + JSON.stringify(user));
+        var newWishlist = user.wishlist;
+        newWishlist.push({ content: content, bought: null });
+        // Insert it back
+        var users = db.get('users');
+        console.log("Saving new wishlist for user " + user.fbId + ": " + JSON.stringify(newWishlist));
+        users.update({fbId: fbId}, { $set: { wishlist: newWishlist } });
+        res.send('OK');
+    }, next);
 });
 
-router.post("/buyFriendWish", function(req, res) {
-    var fbId = req.body.fbId;
-    var wishId = req.body.wishId;
+router.post("/buyFriendWish/:myid/:wishid", function(req, res) {
+    var fbId = req.params.myid;
+    var wishId = req.params.wishid;
     var db = req.db;
     var wishes = db.get('wishes');
 
@@ -216,22 +232,6 @@ router.post("/buyFriendWish", function(req, res) {
            res.send(200, "OK");
        }
     });
-});
-
-router.get('/friends', function (req, res) {
-    var friend1 = users[1].id;
-    var friend2 = users[2].id;
-    res.json([friend1, friend2]);
-});
-
-router.get('/friends/:id/list', function (req, res) {
-    var friendId = req.params.id;
-    for (var i=0; i < users.length; ++i) {
-        if (friendId == users[i].id) {
-            res.json(users[i].wishes);
-            return;
-        }
-    }
 });
 
 router.post('/friends/:friendId/setState/:wishId/:state', function (req, res) {
@@ -266,7 +266,7 @@ router.get('/wishes/:fbId/list', function(req, res, next) {
     var db = req.db;
     var fbUserId = req.params.fbId;
     if (!fbUserId) {
-        return next(new Error("id not set, please set to user's internal id"));
+        return next(new Error("fbId not set, please set to user's facebook id"));
     }
     var wishes = db.get('wishes');
     wishes.find({ "id": fbUserId }, {}, function(e,data){
