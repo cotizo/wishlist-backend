@@ -189,10 +189,8 @@ router.post('/addWish', function (req, res) {
     // Submit to the DB
     wishes.insert({
         "userId": userId,
-        "wish" :[{
-            "content" : content,
-            "bought" : false
-        }]
+        "content" : content,
+        "bought" : null
     }, function (err, doc) {
         if (err) {
             // If it failed, return error
@@ -201,6 +199,21 @@ router.post('/addWish', function (req, res) {
         else {
             res.send("OK");
         }
+    });
+});
+
+router.post("/buyFriendWish", function(req, res) {
+    var fbId = req.body.fbId;
+    var wishId = req.body.wishId;
+    var db = req.db;
+    var wishes = db.get('wishes');
+
+    wishes.update({"_id": wishId}, {"$set" : {"bought": fbId }}, function(err, document) {
+       if(err) {
+           console.log("Could not update the buyer of the wish [" + wishId + "]" );
+       } else {
+           res.send(200, "OK");
+       }
     });
 });
 
