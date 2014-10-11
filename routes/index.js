@@ -229,11 +229,6 @@ router.post('/addWish', function (req, res, next) {
 
     withUser(fbId, req, res, function(user) {
         console.log("Found user: " + JSON.stringify(user));
-        //var newWish = {
-        //    id: uuid.v4(),
-        //    content: content,
-        //    bought: null
-        //};
         var newWish = content;
         console.log("Got newWish: " + JSON.stringify(newWish) + "; setting its .id")
         newWish.id = uuid.v4();
