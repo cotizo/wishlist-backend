@@ -218,18 +218,18 @@ router.post('/addWish', function (req, res, next) {
     var db = req.db;
 
     var fbId = req.body.id;
-    var content = req.body.wish;
+    var wish = JSON.parse(req.body.wish);
 
-    if (!fbId || !content) {
-        var errmsg = 'id or wish content not set (got fbId=' + fbId + ', content="' + content + '")';
+    if (!fbId || !wish) {
+        var errmsg = 'id or wish wish not set (got fbId=' + fbId + ', wish="' + wish + '")';
         console.error(errmsg);
-        res.status(500, errmsg);
+        res.status(500).send(errmsg);
         return;
     }
 
     withUser(fbId, req, res, function(user) {
         console.log("Found user: " + JSON.stringify(user));
-        var newWish = content;
+        var newWish = wish;
         console.log("Got newWish: " + JSON.stringify(newWish) + "; setting its .id")
         newWish.id = uuid.v4();
         // Insert it back
