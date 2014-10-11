@@ -232,18 +232,20 @@ router.post('/addWish', function (req, res, next) {
 });
 
 // Broken - wishes
-router.post("/buyFriendWish/:myid/:wishid", function(req, res) {
-    var fbId = req.params.myid;
-    var wishId = req.params.wishid;
+router.post("/buyFriendWish/:myId/:friendId/:wishId", function(req, res, next) {
+    var fbId = req.params.friendId;
+    var buyerId = req.params.myId;
+    var wishId = req.params.wishId;
     var db = req.db;
-    var wishes = db.get('wishes');
+    var users = db.get('users');
 
-    wishes.update({"_id": wishId}, {"$set" : {"bought": fbId }}, function(err, document) {
-       if(err) {
-           console.log("Could not update the buyer of the wish [" + wishId + "]" );
-       } else {
-           res.send(200, "OK");
-       }
+    users.update({"fbId": fbId, "wishlist.id": wishId }, {"$set": {"wishlist/.$.bought": buyerId} },  function(err, wish) {
+        if(err) {
+            next(new Error("Error encountered looking up wish[" + wishId + "] to update", err));
+        } else {
+            console.log(JSON.stringify(wish, null, 2));
+            res.send(200, "OK");
+        }
     });
 });
 
