@@ -168,7 +168,7 @@ router.get("/getFriendWishlist/:friendId", function(req, res) {
                 res.setHeader('Content-Type', 'application-json');
                 res.end(JSON.stringify(user.wishlist));
             } else {
-                res.send(400, "Could not find the user [" + fbId + "] in the database");
+                res.send(400, "Could not find the user [" + friendId + "] in the database");
             }
         }
     });
