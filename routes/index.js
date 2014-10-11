@@ -273,7 +273,8 @@ router.get('/wishes/:fbId/list', function(req, res, next) {
         return next(new Error("fbId not set, please set to user's facebook id"));
     }
     var wishes = db.get('wishes');
-    wishes.find({ "id": fbUserId }, {}, function(e,data){
+    wishes.find({ "id": fbUserId }, {}, function(e, data){
+        if (e) { console.error(e); res.send(400); return; } // cause it's okay to test for errors.
         res.json(data);
         next();
     });
