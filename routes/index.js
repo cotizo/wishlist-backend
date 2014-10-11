@@ -39,7 +39,7 @@ router.post('/register', function(req, res) {
         "token": userToken
     }, function(err, document) {
         if(err) {
-            throw new Error("There was a problem adding the information to the database");
+            throw new Error("There was a problem adding the information to the database", err);
         } else {
             res.send("OK");
 
@@ -138,7 +138,7 @@ router.get('/friends/:id/list', function (req, res) {
     }
 });
 
-router.post('/friends/:friendId/list/:wishId/:state', function (req, res) {
+router.post('/friends/:friendId/setState/:wishId/:state', function (req, res) {
     var friendId = req.params.friendId;
     var item = req.params.wishId;
     var state = req.params.state;
