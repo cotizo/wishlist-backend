@@ -209,9 +209,8 @@ var withUser = function(fbId, req, res, successCb, next) {
 
 router.post('/addWish', function (req, res, next) {
     var db = req.db;
-
     var fbId = req.body.id;
-    var wish = JSON.parse(req.body.wish);
+    var wish = req.body.wish;
 
     if (!fbId || !wish) {
         var errmsg = 'id or wish wish not set (got fbId=' + fbId + ', wish="' + wish + '")';
@@ -254,7 +253,7 @@ router.post("/buyFriendWish/:myId/:friendId/:wishId", function(req, res, next) {
 router.post("/updateWish/:myId/:wishId", function(req, res, next) {
     var fbId = req.params.myId;
     var wishId = req.params.wishId;
-    var changedFields = JSON.parse(req.body.wish);
+    var changedFields = req.body.wish;
     var db = req.db;
     var users = db.get('users');
 
