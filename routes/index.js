@@ -123,6 +123,25 @@ router.get("/getFriends/:fbId", function(req, res) {
     });
 });
 
+router.get("/getFriendWishlist/:friendId", function(req, res) {
+    var friendId = req.params.friendId;
+    var db = req.db;
+    var users = db.get('users');
+
+    users.findOne({"fbId": friendId}, function(err, user) {
+        if(err) {
+            console.log("Cannot get friend's [" + friendId + "] wishlist");
+        } else {
+            if(user) {
+                res.setHeader('Content-Type', 'application-json');
+                res.end(JSON.stringify(user.wishlist));
+            } else {
+                res.send(400, "Could not find the user [" + fbId + "] in the database");
+            }
+        }
+    });
+});
+
 router.post('/addWish', function (req, res) {
     var db = req.db;
 
