@@ -154,7 +154,7 @@ router.get("/getFriends/:fbId", function(req, res, next) {
            if(user) {
                users.find({fbId: { $in: user.friends }}, { "fbId": 1, "name": 1 }, function(err, friendsWithName) {
                    if (!err) {
-                       var ret = friendsWithName.map(function(a) { return { fbId: a.fbId, name: a.name } });
+                       var ret = friendsWithName.map(function(a) { return { id: a.fbId, name: a.name } });
                        res.json(ret);
                    } else {
                        next(new Error("Couldn't get the names of " + fbId + "'s friends (which are: "+ user.friends + ")", err));
