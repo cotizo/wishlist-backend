@@ -17,6 +17,7 @@
     "fb": "~0.7.0",
     "firebase": "~1.1.1",
     "mongodb": "*",
-    "monk": "*"
+    "monk": "*",
+    "request": "*"
   }
 }

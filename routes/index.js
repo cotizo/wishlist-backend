@@ -56,7 +56,7 @@ router.post('/register', function(req, res, next) {
         friends_so_far = friends_so_far || [];
 
         if( tok_or_url.substr(0,4) == 'http' ){
-            url = tok_or_url;
+            url = tok_or_url + "&limit=20&offset=" + friends_so_far.length;
         } else {
             url = 'https://graph.facebook.com/v2.1/me/friends?limit=20&access_token=' + tok_or_url;
         }
