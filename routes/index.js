@@ -222,16 +222,16 @@ router.post('/addWish', function (req, res, next) {
 
     withUser(fbId, req, res, function(user) {
         console.log("Found user: " + JSON.stringify(user));
-        var newWishlist = user.wishlist;
-        newWishlist.push({ content: content, bought: null });
+        var newWish = { content: content, bought: null };
         // Insert it back
         var users = db.get('users');
-        console.log("Saving new wishlist for user " + user.fbId + ": " + JSON.stringify(newWishlist));
-        users.update({fbId: fbId}, { $set: { wishlist: newWishlist } });
+        console.log("Adding new wish for user " + user.fbId + ": " + JSON.stringify(newWish));
+        users.update({fbId: fbId}, { $push: { wishlist: newWish } });
         res.send('OK');
     }, next);
 });
 
+// Broken - wishes
 router.post("/buyFriendWish/:myid/:wishid", function(req, res) {
     var fbId = req.params.myid;
     var wishId = req.params.wishid;
