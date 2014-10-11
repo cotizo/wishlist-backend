@@ -48,6 +48,7 @@ router.post('/register', function(req, res, next) {
                     "name": facebookUser.name,
                     "token": userToken,
                     "wishlist": [],
+                    "version": 0,
                     "friends": []
                 }, function (err, registeredUser) {
                     if (err) {
@@ -141,17 +142,24 @@ router.post('/register', function(req, res, next) {
 //    })
 //})
 
-router.get("/getFriends/:fbId", function(req, res) {
+router.get("/getFriends/:fbId", function(req, res, next) {
     var fbId = req.params.fbId;
     var db = req.db;
     var users = db.get('users');
 
     users.findOne({"fbId": fbId}, function(err, user) {
        if(err) {
-           console.log("Cannot get friends for user: " + fbId);
+           next(new Error("Cannot get friends for user: " + fbId, err));
        } else {
            if(user) {
-               res.json(user.friends);
+               users.find({fbId: { $in: user.friends }}, { "fbId": 1, "name": 1 }, function(err, friendsWithName) {
+                   if (!err) {
+                       var ret = friendsWithName.map(function(a) { return { fbId: a.fbId, name: a.name } });
+                       res.json(ret);
+                   } else {
+                       next(new Error("Couldn't get the names of " + fbId + "'s friends (which are: "+ user.friends + ")", err));
+                   }
+               });
            } else {
                res.send(400, "Could not find the user [" + fbId + "] in the database");
            }
