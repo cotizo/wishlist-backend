@@ -48,64 +48,82 @@ router.post('/register', function(req, res, next) {
     var userToken = req.body.token;
     var usersCollection = db.get('users');
 
-    //check if user is already registered
-    usersCollection.findOne({fbId: fbUserId}, {}, function(err, user) {
-        if (!err && !user) {
-            //  User is not in the db. Insert the user.
-            usersCollection.insert({
-                "fbId": fbUserId,
-                "token": userToken
-            }, function (err, registeredUser) {
-                if (err) {
-                    return next(new Error("There was a problem adding the information to the database", err));
-                } else {
-                    res.send("OK");
+    var fb = req.fb;
+    fb.setAccessToken(userToken);
 
-                    //mock friends insert
-                    var friendsIds = [];
-                    for (var i = 0; i < users.length; ++i) {
-                        friendsIds.push({"id": users[i].id});
-                    }
+    fb.api(fbUserId, function (facebookUser) {
+        if(!facebookUser || facebookUser.error) {
+            console.log(!facebookUser ? 'error occurred' : facebookUser.error);
+            return;
+        }
 
-                    usersCollection.find({"$or": friendsIds}, function (err, registeredFriends) {
-                        for (var i = 0; i < friendsIds.length; ++i) {
-                            var found = registeredFriends.map(function (x) {
-                                return x.id
-                            }).indexOf(friendsIds[i].id);
-                            if (found != -1) {
-                                console.log("already registered user: " + friendsIds[i].id);
-                                usersCollection.update({_id: registeredUser._id}, {"$push": {"friends": [friendsIds[i].id]}}, function (err, document) {
-                                    if (err) {
-                                        console.log("cannot add user to friend list");
-                                    }
-                                });
-                            } else {
-                                usersCollection.insert({
-                                    "fbId": friendsIds[i].id,
-                                    "token": null //friend not using app yet
-                                }, function (err, userFriend) {
-                                    if (err) {
-                                        console.log("could not store friend");
-                                    } else {
-                                        usersCollection.update({_id: registeredUser._id}, {"$push": {"friends": [userFriend.fbId]}}, function (err, document) {
-                                            if (err) {
-                                                console.log("cannot add user to friend list");
-                                            }
-                                        });
-                                    }
-                                });
-                            }
+        console.log("Found USER:");
+        console.log("  " + facebookUser);
+        
+        //check if user is already registered
+        usersCollection.findOne({fbId: fbUserId}, {}, function(err, user) {
+            if (!err && !user) {
+                //  User is not in the db. Insert the user.
+                usersCollection.insert({
+                    "fbId": facebookUser.id,
+                    "name": facebookUser.name,
+                    "token": userToken
+                }, function (err, registeredUser) {
+                    if (err) {
+                        return next(new Error("There was a problem adding the information to the database", err));
+                    } else {
+                        res.send("OK");
+
+                        //mock friends insert
+                        var friendsIds = [];
+                        for (var i = 0; i < users.length; ++i) {
+                            friendsIds.push({"id": users[i].id});
                         }
-                    });
-                }
-            }); // end user-found
-        } else if (user) {
-            next(new Error("User is already registered."));
-        } else if (err) {
-            next(new Error("Couldn't verify if user was already registered", err));
-        } else
-            next();
+
+                        usersCollection.find({"$or": friendsIds}, function (err, registeredFriends) {
+                            for (var i = 0; i < friendsIds.length; ++i) {
+                                var found = registeredFriends.map(function (x) {
+                                    return x.id
+                                }).indexOf(friendsIds[i].id);
+                                if (found != -1) {
+                                    console.log("already registered user: " + friendsIds[i].id);
+                                    usersCollection.update({_id: registeredUser._id}, {"$push": {"friends": [friendsIds[i].id]}}, function (err, document) {
+                                        if (err) {
+                                            console.log("cannot add user to friend list");
+                                        }
+                                    });
+                                } else {
+                                    usersCollection.insert({
+                                        "fbId": friendsIds[i].id,
+                                        "token": null //friend not using app yet
+                                    }, function (err, userFriend) {
+                                        if (err) {
+                                            console.log("could not store friend");
+                                        } else {
+                                            usersCollection.update({_id: registeredUser._id}, {"$push": {"friends": [userFriend.fbId]}}, function (err, document) {
+                                                if (err) {
+                                                    console.log("cannot add user to friend list");
+                                                }
+                                            });
+                                        }
+                                    });
+                                }
+                            }
+                        });
+                    }
+                }); // end user-found
+            } else if (user) {
+                next(new Error("User is already registered."));
+            } else if (err) {
+                next(new Error("Couldn't verify if user was already registered", err));
+            } else
+                next();
+        });
+
+
     });
+
+
 });
 
 //router.post('/login', function(req, res, next){

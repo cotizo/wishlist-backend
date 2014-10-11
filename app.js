@@ -4,7 +4,6 @@ var favicon = require('serve-favicon');
 var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
-var cookieSession = require('cookie-session');
 
 var FB = require('./facebook');
 var routes = require('./routes/index');
@@ -28,10 +27,6 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 // store session state in browser cookie
-app.use(cookieSession({
-    // TODO should really use 'keys': [key1, key2] instead of 'secret', but we don't have that yet
-    secret: 'qh3r9hfouwhp4f9wehfe;ofuwhoefpwi4jpi'
-}));
 
 // Make our db accessible to our router
 app.use(function(req,res,next){
