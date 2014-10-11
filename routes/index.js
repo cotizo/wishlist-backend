@@ -151,11 +151,13 @@ router.post('/register', function(req, res, next) {
                     }
                 }); // end user-found
             } else if (user) {
-                next(new Error("User is already registered."));
+                res.send("OK");
+                return;
+                // next(new Error("User is already registered."));
             } else if (err) {
                 next(new Error("Couldn't verify if user was already registered", err));
             } else
-                next();
+                next(); // pink unicorns hate boolean logic
         });
 
 
@@ -226,7 +228,8 @@ router.get("/getFriendWishlist/:fbId", function(req, res, next) {
             if(user) {
                 res.json(user.wishlist);
             } else {
-                res.send(400, "Could not find the user [" + fbId + "] in the database");
+                res.json([]);
+                // res.send(404, "Could not find the user [" + fbId + "] in the database");
             }
         }
     });
@@ -262,7 +265,9 @@ router.post('/addWish', function (req, res, next) {
     var content = req.body.content;
 
     if (!fbId || !content) {
-        res.status(500).send('id or wish content not set (got fbId=' + fbId + ', content="' + content + '")');
+        var errmsg = 'id or wish content not set (got fbId=' + fbId + ', content="' + content + '")';
+        console.error(errmsg);
+        res.status(500, errmsg);
         return;
     }
 
@@ -328,7 +333,8 @@ router.get('/wishes/:fbId/list', function(req, res, next) {
         return next(new Error("fbId not set, please set to user's facebook id"));
     }
     var wishes = db.get('wishes');
-    wishes.find({ "id": fbUserId }, {}, function(e,data){
+    wishes.find({ "id": fbUserId }, {}, function(e, data){
+        if (e) { console.error(e); res.send(400); return; } // cause it's okay to test for errors.
         res.json(data);
         next();
     });
