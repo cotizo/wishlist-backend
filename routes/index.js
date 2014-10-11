@@ -29,19 +29,19 @@ var users = [
 
 router.post('/register', function(req, res) {
     var db = req.db;
-    var userId = req.body.id;
+    var fbUserId = req.body.fbId;
     var userToken = req.body.token;
     var usersCollection = db.get('users');
 
     //check if user is already registered
     usersCollection.insert({
-        "id": userId,
+        "fbId": fbUserId,
         "token": userToken
     }, function(err, document) {
         if(err) {
-            res.send("There was a problem adding the information to the database");
+            throw new Error("There was a problem adding the information to the database");
         } else {
-            res.send(200, "OK");
+            res.send("OK");
 
             //mock friends insert
             //null token for fb users who don't use the app yet
@@ -65,19 +65,19 @@ router.post('/register', function(req, res) {
 
 router.post('/login', function(req, res){
     var db = req.db;
-    var userId = req.body.id;
+    var fbUserId = req.body.fbId;
     var userToken = req.body.token;
     var users = db.get('users');
 
-    users.findOne({id: userId}, function(err, user) {
+    users.findOne({fbId: fbUserId}, function(err, user) {
         if(err) {
-            res.send("There was a problem logging in the user");
+            throw new Error("There was a problem logging in the user");
         } else {
-            res.send(200, "OK");
+            res.send("OK");
         }
 
         if(user) {
-            console.log('id:' + user.id);
+            console.log('fbId:' + user.fbId);
             console.log('token:' + user.token);
         } else {
             console.log("user logged");
