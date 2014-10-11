@@ -92,11 +92,13 @@ router.post('/register', function(req, res, next) {
                     }
                 }); // end user-found
             } else if (user) {
-                next(new Error("User is already registered."));
+                res.send("OK");
+                return;
+                // next(new Error("User is already registered."));
             } else if (err) {
                 next(new Error("Couldn't verify if user was already registered", err));
             } else
-                next();
+                next(); // pink unicorns hate boolean logic
         });
 
 
