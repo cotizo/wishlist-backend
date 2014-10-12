@@ -5,20 +5,7 @@ var uuid = require('node-uuid');
 
 var datediff = require('../datediff');
 
-//function restrict(req, res, next) {
-//    if (req.session.user) {
-//        next();
-//    } else {
-//        next (new Error('Access denied - not logged in!'));
-//    }
-//}
-
-//router.get('/logout', function(req, res){
-//    // destroy the user's session to log them out
-//    // will be re-created next request
-//    req.session = null;
-//    res.send("Logged out");
-//});
+var request = require('request');
 
 router.post('/register', function(req, res, next) {
     var db = req.db;
@@ -29,8 +16,6 @@ router.post('/register', function(req, res, next) {
     var fb = req.fb;
     fb.setAccessToken(userToken);
 
-
-
     fb.api(fbUserId, function (facebookUser) {
         if(!facebookUser || facebookUser.error) {
             console.log(!facebookUser ? 'error occurred' : facebookUser.error);
@@ -38,8 +23,6 @@ router.post('/register', function(req, res, next) {
         }
 
         console.log("Attempting to register the Facebook user: id=" + fbUserId + " name=" + facebookUser.name + " username=" + facebookUser.username);
-//        console.log(JSON.stringify(facebookUser, null, 2));
-
         //check if user is already registered
         usersCollection.findOne({fbId: fbUserId}, {}, function(err, user) {
             if (!err && !user) {
@@ -73,6 +56,20 @@ router.post('/register', function(req, res, next) {
                     } else {
                         // Ok but now let's make all the friend associations
 
+                        //get facebook profile picture
+                        request("https://graph.facebook.com/v2.1/" + facebookUser.id + "/picture?type=large", function(err, res, body) {
+                            if(err) {
+                                console.log('error occurred: ' + err);
+                            } else {
+                                console.log(JSON.stringify(res, null, 2));
+                                usersCollection.update({fbId: facebookUser.id}, {"$set":{ url: res.request.uri.href}}, function(error, document){
+                                    if(error) {
+                                        return next(new Error("Could not store picture url.", error));
+                                    }
+                                });
+                            }
+                        });
+
                         usersCollection.find({}, function(err, allRegisteredUsers) {
                             // This must not be a for loop! :) Trust meh
                             _.each(allRegisteredUsers, function(potentialFriend) {
@@ -85,9 +82,6 @@ router.post('/register', function(req, res, next) {
                                             console.log(!friend ? 'error occurred' : friend.error);
                                             return;
                                         }
-
-//                                        console.log("/" + fbUserId + "/friends/" + currentRegisteredUserId + " returned " + JSON.stringify(friend, null, 2));
-//                                        console.log("Length of .data: " + friend.data.length);
 
                                         if(friend.data.length > 0) {
                                             if(friend.data[0].id == currentRegisteredUserId) {
@@ -183,7 +177,8 @@ router.get("/getFriends/:fbId", function(req, res, next) {
                                    id: a.fbId,
                                    name: a.name,
                                    birthday: a.birthday,
-                                   numberOfWishes: a.wishlist.length
+                                   numberOfWishes: a.wishlist.length,
+                                   picture: a.url
                                }
                            });
                            res.json(ret);
@@ -247,9 +242,8 @@ var withUser = function(fbId, req, res, successCb, next) {
 
 router.post('/addWish', function (req, res, next) {
     var db = req.db;
-
     var fbId = req.body.id;
-    var wish = JSON.parse(req.body.wish);
+    var wish = req.body.wish;
 
     if (!fbId || !wish) {
         var errmsg = 'id or wish wish not set (got fbId=' + fbId + ', wish="' + wish + '")';
@@ -292,7 +286,7 @@ router.post("/buyFriendWish/:myId/:friendId/:wishId", function(req, res, next) {
 router.post("/updateWish/:myId/:wishId", function(req, res, next) {
     var fbId = req.params.myId;
     var wishId = req.params.wishId;
-    var changedFields = JSON.parse(req.body.wish);
+    var changedFields = req.body.wish;
     var db = req.db;
     var users = db.get('users');
 
