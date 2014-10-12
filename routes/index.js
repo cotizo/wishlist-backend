@@ -38,7 +38,7 @@ router.post('/register', function(req, res, next) {
                         // Ok but now let's make all the friend associations
 
                         //get facebook profile picture
-                        request("https://graph.facebook.com/v2.1/" + facebookUser.id + "/picture?type=square", function(err, res, body) {
+                        request("https://graph.facebook.com/v2.1/" + facebookUser.id + "/picture?type=large", function(err, res, body) {
                             if(err) {
                                 console.log('error occurred: ' + err);
                             } else {
