@@ -244,7 +244,10 @@ router.post('/addWish', function (req, res, next) {
     var db = req.db;
     var fbId = req.body.id;
     var wish = req.body.wish;
-    assert(typeof wish === 'object', "POST parameter `wish` needs to be a JSON object with fields that you want to update");
+    if (!(typeof wish === 'object')) {
+        res.status(400).send("POST parameter `wish` needs to be a JSON object with fields that you want to update");
+        return;
+    }
 
     if (!fbId || !wish) {
         var errmsg = 'id or wish not set (got id=' + fbId + ', wish=' + wish + ')';
@@ -288,7 +291,10 @@ router.post("/updateWish/:myId/:wishId", function(req, res, next) {
     var fbId = req.params.myId;
     var wishId = req.params.wishId;
     var changedFields = req.body.wish;
-    assert(typeof changedFields === 'object', "POST parameter `wish` needs to be a JSON object with fields that you want to update");
+    if (!(typeof wish === 'object')) {
+        res.status(400).send("POST parameter `wish` needs to be a JSON object with fields that you want to update");
+        return;
+    }
     var db = req.db;
     var users = db.get('users');
 
