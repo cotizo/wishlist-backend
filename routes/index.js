@@ -302,6 +302,19 @@ router.post("/updateWish/:myId/:wishId", function(req, res, next) {
     });
 });
 
+router.post("/deleteWish/:myId/:wishId", function(req, res, next) {
+    var fbId = req.params.myId;
+    var wishId = req.params.wishId;
+    var db = req.db;
+    var users = db.get('users');
+
+    console.log("fbId:" + fbId);
+    console.log("wishId:" + wishId);
+
+    users.update({fbId: fbId}, {$pull: {"wishlist": {id: wishId}}});
+    res.send(200, "OK");
+});
+
 /** Updates only the `changedFields` inside the document that can be found at `objectPrefix` after running the
  * `query` on `coll`. */
 var doUpdate = function(coll, query, objectPrefix, changedFields, cb) {
