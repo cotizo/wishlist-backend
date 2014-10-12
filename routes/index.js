@@ -7,13 +7,20 @@ var datediff = require('../datediff');
 
 var request = require('request');
 
-router.post('/register', function(req, res, next) {
-    var db = req.db;
-    var fbUserId = req.body.fbId;
-    var userToken = req.body.token;
-    var usersCollection = db.get('users');
+function mergeObjects(obj1,obj2){
+    var obj3 = {};
+    for (var attrname in obj1) { obj3[attrname] = obj1[attrname]; }
+    for (var attrname in obj2) { obj3[attrname] = obj2[attrname]; }
+    return obj3;
+}
 
-    var fb = req.fb;
+router.post('/register', function(req, res, next) {
+    const db = req.db;
+    const fbUserId = req.body.fbId;
+    const userToken = req.body.token;
+    const usersCollection = db.get('users');
+
+    const fb = req.fb;
     fb.setAccessToken(userToken);
 
     fb.api(fbUserId, function (facebookUser) {
@@ -24,106 +31,112 @@ router.post('/register', function(req, res, next) {
 
         console.log("Attempting to register the Facebook user: id=" + fbUserId + " name=" + facebookUser.name + " username=" + facebookUser.username);
         //check if user is already registered
-        usersCollection.findOne({fbId: fbUserId}, {}, function(err, user) {
-            if (!err && !user) {
-                //  User is not in the db. Insert the user.
+        const thisUserQuery = {fbId: fbUserId};
+        usersCollection.findOne(thisUserQuery, {}, function(err, user) {
+            if (!err) {
+                function insertOrUpdateUser(user, facebookUser) { // user = if the user was found in the db
+                    function insertOrUpdateCallbackFor (alreadyFriends) {
+                    return function (err, registeredUser) {
+                        if (err) {
+                            return next(new Error("There was a problem adding the information to the database", err));
+                        } else {
+                            // Ok but now let's make all the friend associations
 
-                // Hint: for debugging we actually allow specifying the birthday manually via POST.
-                var birthday = facebookUser.birthday || req.body.birthday;
-                if (!birthday) {
-                    return next(new Error("You must have a birthday set up on Facebook before you can use this app."));
-                }
-                // birthday format is mm/dd/YYYY
-                var bdSplit = birthday.split("/");
-                var day = bdSplit[1];
-                var month = bdSplit[0]-1;
-                var year = bdSplit[2];
-                var birthdayObj = new Date(year, month, day);
-                usersCollection.insert({
-                    "fbId": facebookUser.id,
-                    "name": facebookUser.name,
-                    // HACK to approximate how many days from start-of-year til this person's birthday
-                    // of course this is really dependent on the current year. but this should do for now
-                    "birthdayCmp": datediff.inDays(new Date(birthdayObj.getFullYear(), 0, 1), birthdayObj),
-                    "birthday": birthday,
-                    "token": userToken,
-                    "wishlist": [],
-                    "version": 0,
-                    "friends": []
-                }, function (err, registeredUser) {
-                    if (err) {
-                        return next(new Error("There was a problem adding the information to the database", err));
-                    } else {
-                        // Ok but now let's make all the friend associations
-
-                        //get facebook profile picture
-                        request("https://graph.facebook.com/v2.1/" + facebookUser.id + "/picture?type=large", function(err, res, body) {
-                            if(err) {
-                                console.log('error occurred: ' + err);
-                            } else {
-                                console.log(JSON.stringify(res, null, 2));
-                                usersCollection.update({fbId: facebookUser.id}, {"$set":{ url: res.request.uri.href}}, function(error, document){
-                                    if(error) {
-                                        return next(new Error("Could not store picture url.", error));
-                                    }
-                                });
-                            }
-                        });
-
-                        usersCollection.find({}, function(err, allRegisteredUsers) {
-                            // This must not be a for loop! :) Trust meh
-                            _.each(allRegisteredUsers, function(potentialFriend) {
-
-                                if(potentialFriend.fbId != fbUserId) {
-                                    console.log("Registering ["+ fbUserId +"]: Checking whether registered user " + potentialFriend.name + " [" + potentialFriend.fbId + "] is a friend");
-                                    var currentRegisteredUserId = potentialFriend.fbId;
-                                    fb.api(fbUserId + "/friends/" + potentialFriend.fbId, function(friend) {
-                                        if(!friend || friend.error || friend.type == 'OAuthException') {
-                                            console.log(!friend ? 'error occurred' : friend.error);
-                                            return;
+                            //get facebook profile picture
+                            request("https://graph.facebook.com/v2.1/" + facebookUser.id + "/picture?type=large", function(err, res, body) {
+                                if(err) {
+                                    console.log('error occurred: ' + err);
+                                } else {
+//                                    console.log(JSON.stringify(res, null, 2));
+                                    usersCollection.update({fbId: facebookUser.id}, {"$set":{ url: res.request.uri.href}}, function(error, document){
+                                        if(error) {
+                                            return next(new Error("Could not store picture url.", error));
                                         }
-
-                                        if(friend.data.length > 0) {
-                                            if(friend.data[0].id == currentRegisteredUserId) {
-                                                //they are friends
-                                                //update both friends lists
-                                                usersCollection.update({fbId: currentRegisteredUserId}, {"$push": {"friends": fbUserId }}, function (err, document) {
-                                                    if (err) {
-                                                        return next(new Error("Could not add user [" + fbUserId + "] as friend of user [" + currentRegisteredUserId + "]", err));
-                                                    } else {
-                                                        usersCollection.update({fbId: fbUserId}, {"$push": {"friends": currentRegisteredUserId}}, function(err, document) {
-                                                            if(err) {
-                                                                return next(new Error("Could not add user [" + currentRegisteredUserId+ "] as friend of user [" + fbUserId + "]", err));
-                                                            }
-                                                        });
-                                                    }
-                                                });
-                                            }
-                                        } else {
-                                            console.log("Users [" + fbUserId + "] and [" + currentRegisteredUserId + "] are not friends!");
-                                        }
-
                                     });
                                 }
                             });
-                            res.send("OK");
-                        })
+
+                            usersCollection.find({fbId: { $nin: alreadyFriends }}, function(err, allRegisteredUsers) {
+                                // This must not be a for loop! :) Trust meh
+                                _.each(allRegisteredUsers, function(potentialFriend) {
+
+                                    if(potentialFriend.fbId != fbUserId) {
+                                        console.log("Registering ["+ fbUserId +"]: Checking whether registered user " + potentialFriend.name + " [" + potentialFriend.fbId + "] is a friend");
+                                        var currentRegisteredUserId = potentialFriend.fbId;
+                                        fb.api(fbUserId + "/friends/" + potentialFriend.fbId, function(friend) {
+                                            if(!friend || friend.error || friend.type == 'OAuthException') {
+                                                console.log(!friend ? 'error occurred' : friend.error);
+                                                return;
+                                            }
+
+                                            if(friend.data.length > 0) {
+                                                if(friend.data[0].id == currentRegisteredUserId) {
+                                                    //they are friends
+                                                    //update both friends lists
+                                                    usersCollection.update({fbId: currentRegisteredUserId}, {$addToSet: {"friends": fbUserId }}, function (err, document) {
+                                                        if (err) {
+                                                            return next(new Error("Could not add user [" + fbUserId + "] as friend of user [" + currentRegisteredUserId + "]", err));
+                                                        } else {
+                                                            usersCollection.update({fbId: fbUserId}, {$addToSet: {"friends": currentRegisteredUserId}}, function(err, document) {
+                                                                if(err) {
+                                                                    return next(new Error("Could not add user [" + currentRegisteredUserId+ "] as friend of user [" + fbUserId + "]", err));
+                                                                }
+                                                            });
+                                                        }
+                                                    });
+                                                }
+                                            } else {
+                                                console.log("Users [" + fbUserId + "] and [" + currentRegisteredUserId + "] are not friends!");
+                                            }
+
+                                        });
+                                    }
+                                });
+                                res.send("OK");
+                            })
+                        }
+                    }}
+
+                    // Hint: for debugging we actually allow specifying the birthday manually via POST.
+                    const birthday = facebookUser.birthday || req.body.birthday;
+                    if (!birthday) {
+                        return next(new Error("You must have a birthday set up on Facebook before you can use this app."));
                     }
-                }); // end user-found
-            } else if (user) {
-                res.send("OK");
-                return;
-                // next(new Error("User is already registered."));
-            } else if (err) {
+                    // birthday format is mm/dd/YYYY
+                    const bdSplit = birthday.split("/");
+                    const day = bdSplit[1];
+                    const month = bdSplit[0] - 1;
+                    const year = bdSplit[2];
+                    const birthdayObj = new Date(year, month, day);
+                    const updatables = {
+                        "name": facebookUser.name,
+                        // HACK to approximate how many days from start-of-year til this person's birthday
+                        // of course this is really dependent on the current year. but this should do for now
+                        "birthdayCmp": datediff.inDays(new Date(birthdayObj.getFullYear(), 0, 1), birthdayObj),
+                        "birthday": birthday,
+                        "token": userToken
+                    };
+                    if (!user) {
+                        //  User is not in the db. Insert the user.
+                        var defaults = {
+                            "fbId": facebookUser.id,
+                            "wishlist": [],
+                            "version": 0,
+                            "friends": []
+                        };
+                        usersCollection.insert(mergeObjects(updatables, defaults), insertOrUpdateCallbackFor([]));
+                    } else {
+                        console.log("User " + fbUserId + " already exists. Updating the following fields: " + JSON.stringify(updatables, null, 2));
+                        doUpdate(usersCollection, thisUserQuery, "", updatables, insertOrUpdateCallbackFor(user.friends));
+                    }
+                }
+
+                insertOrUpdateUser(user, facebookUser);
+            } else {
                 next(new Error("Couldn't verify if user was already registered", err));
-            } else
-                next(); // pink unicorns hate boolean logic
+            }
         });
-
-
     });
-
-
 });
 
 //router.post('/login', function(req, res, next){
@@ -298,7 +311,7 @@ router.post("/updateWish/:myId/:wishId", function(req, res, next) {
     var db = req.db;
     var users = db.get('users');
 
-    doUpdate(users, {"fbId": fbId, "wishlist.id": wishId }, "wishlist.$", changedFields, function(err, wish) {
+    doUpdate(users, {"fbId": fbId, "wishlist.id": wishId }, "wishlist.$.", changedFields, function(err, wish) {
         if(err) {
             next(new Error("Error encountered looking up wish[" + wishId + "] to update", err));
         } else {
@@ -325,7 +338,8 @@ router.post("/deleteWish/:myId/:wishId", function(req, res, next) {
  * `query` on `coll`. */
 var doUpdate = function(coll, query, objectPrefix, changedFields, cb) {
     var updates = {};
-    _.forEach(changedFields, function(val, key) { updates[objectPrefix + "." + key] = val; });
+    _.forEach(changedFields, function(val, key) { updates[objectPrefix + key] = val; });
+//    console.log("Updating document for query " + JSON.stringify(query) + " with fields: " + JSON.stringify(updates, null, 2));
     return coll.update(query, { $set: updates }, cb);
 };
 
