@@ -304,7 +304,7 @@ router.post("/updateWish/:myId/:wishId", function(req, res, next) {
     var fbId = req.params.myId;
     var wishId = req.params.wishId;
     var changedFields = req.body.wish;
-    if (!(typeof wish === 'object')) {
+    if (!(typeof changedFields === 'object')) {
         res.status(400).send("POST parameter `wish` needs to be a JSON object with fields that you want to update");
         return;
     }
