@@ -266,7 +266,7 @@ router.post('/addWish', function (req, res, next) {
         var users = db.get('users');
         console.log("Adding new wish for user " + user.fbId + ": " + JSON.stringify(newWish));
         users.update({fbId: fbId}, { $push: { wishlist: newWish } });
-        res.send('OK');
+        res.send(newWish.id);
     }, next);
 });
 
