@@ -3,6 +3,7 @@ var router = express.Router();
 var _ = require('underscore');
 var uuid = require('node-uuid');
 
+var datediff = require('../datediff');
 
 //function restrict(req, res, next) {
 //    if (req.session.user) {
@@ -43,9 +44,25 @@ router.post('/register', function(req, res, next) {
         usersCollection.findOne({fbId: fbUserId}, {}, function(err, user) {
             if (!err && !user) {
                 //  User is not in the db. Insert the user.
+
+                // Hint: for debugging we actually allow specifying the birthday manually via POST.
+                var birthday = facebookUser.birthday || req.body.birthday;
+                if (!birthday) {
+                    return next(new Error("You must have a birthday set up on Facebook before you can use this app."));
+                }
+                // birthday format is mm/dd/YYYY
+                var bdSplit = birthday.split("/");
+                var day = bdSplit[1];
+                var month = bdSplit[0]-1;
+                var year = bdSplit[2];
+                var birthdayObj = new Date(year, month, day);
                 usersCollection.insert({
                     "fbId": facebookUser.id,
                     "name": facebookUser.name,
+                    // HACK to approximate how many days from start-of-year til this person's birthday
+                    // of course this is really dependent on the current year. but this should do for now
+                    "birthdayCmp": datediff.inDays(new Date(birthdayObj.getFullYear(), 0, 1), birthdayObj),
+                    "birthday": birthday,
                     "token": userToken,
                     "wishlist": [],
                     "version": 0,
@@ -151,19 +168,33 @@ router.get("/getFriends/:fbId", function(req, res, next) {
        if(err) {
            next(new Error("Cannot get friends for user: " + fbId, err));
        } else {
-           if(user) {
-               users.find({fbId: { $in: user.friends }}, { "fbId": 1, "name": 1 }, function(err, friendsWithName) {
-                   if (!err) {
-                       var ret = friendsWithName.map(function(a) { return { id: a.fbId, name: a.name } });
-                       res.json(ret);
-                   } else {
-                       next(new Error("Couldn't get the names of " + fbId + "'s friends (which are: "+ user.friends + ")", err));
-                   }
-               });
+           if (user) {
+               users.find({fbId: { $in: user.friends }}, { fbId: 1, name: 1, birthday: 1, wishlist: 1, sort: [ "birthdayCmp", 'asc'] },
+                   function (err, friendsWithName) {
+                       console.log(friendsWithName);
+                       if (!err) {
+                           // How many days this year till today?
+                           var todayDiff = datediff.inDays(new Date(new Date().getFullYear(), 0, 1), new Date());
+                           var ret0 = _.flatten(_.partition(friendsWithName, function (p) {
+                               return p.birthdayCmp >= todayDiff;
+                           }));
+                           var ret = _.map(ret0, function (a) {
+                               return {
+                                   id: a.fbId,
+                                   name: a.name,
+                                   birthday: a.birthday,
+                                   numberOfWishes: a.wishlist.length
+                               }
+                           });
+                           res.json(ret);
+                       } else {
+                           next(new Error("Couldn't get the names of " + fbId + "'s friends (which are: " + user.friends + ")", err));
+                       }
+                   });
+               // end of users.find
            } else {
                res.send(400, "Could not find the user [" + fbId + "] in the database");
            }
-
        }
     });
 });
